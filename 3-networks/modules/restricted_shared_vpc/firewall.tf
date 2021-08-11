@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -184,4 +184,54 @@ resource "google_compute_firewall" "allow_windows_activation" {
   destination_ranges = ["35.190.247.13/32"]
 
   target_tags = ["allow-win-activation"]
+}
+
+resource "google_compute_firewall" "allow_all_egress" {
+  count     = var.allow_all_egress_ranges != null ? 1 : 0
+  name      = "fw-${var.environment_code}-shared-base-1000-e-a-all"
+  network   = module.main.network_name
+  project   = var.project_id
+  direction = "EGRESS"
+  priority  = 1000
+
+  dynamic "log_config" {
+    for_each = var.firewall_enable_logging == true ? [{
+      metadata = "INCLUDE_ALL_METADATA"
+    }] : []
+
+    content {
+      metadata = log_config.value.metadata
+    }
+  }
+
+  allow {
+    protocol = "all"
+  }
+
+  destination_ranges = var.allow_all_egress_ranges
+}
+
+resource "google_compute_firewall" "allow_all_ingress" {
+  count     = var.allow_all_ingress_ranges != null ? 1 : 0
+  name      = "fw-${var.environment_code}-shared-base-1000-i-a-all"
+  network   = module.main.network_name
+  project   = var.project_id
+  direction = "INGRESS"
+  priority  = 1000
+
+  dynamic "log_config" {
+    for_each = var.firewall_enable_logging == true ? [{
+      metadata = "INCLUDE_ALL_METADATA"
+    }] : []
+
+    content {
+      metadata = log_config.value.metadata
+    }
+  }
+
+  allow {
+    protocol = "all"
+  }
+
+  source_ranges = var.allow_all_ingress_ranges
 }

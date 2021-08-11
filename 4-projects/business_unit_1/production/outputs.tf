@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,11 @@
 output "base_shared_vpc_project" {
   description = "Project sample base project."
   value       = module.base_shared_vpc_project.project_id
+}
+
+output "base_shared_vpc_project_sa" {
+  description = "Project sample base project SA."
+  value       = module.base_shared_vpc_project.sa
 }
 
 output "floating_project" {
@@ -62,4 +67,24 @@ output "access_context_manager_policy_id" {
 output "peering_complete" {
   description = "Output to be used as a module dependency."
   value       = module.peering.complete
+}
+
+output "env_secrets_project" {
+  description = "Project sample peering project id."
+  value       = module.env_secrets_project.project_id
+}
+
+output "keyring" {
+  description = "The name of the keyring."
+  value       = module.kms.keyring
+}
+
+output "keys" {
+  description = "List of created key names."
+  value       = keys(module.kms.keys)
+}
+
+output "bucket" {
+  description = "The created storage bucket"
+  value       = module.gcs_buckets.bucket
 }

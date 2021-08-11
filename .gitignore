@@ -19,9 +19,6 @@
 Session.vim
 .netrwhist
 
-# IntelliJ IDEA files:
-.idea/
-
 ### https://raw.github.com/github/gitignore/90f149de451a5433aebd94d02d11b0e28843a1af/Terraform.gitignore
 
 # Local .terraform directories
@@ -30,6 +27,9 @@ Session.vim
 # .tfstate files
 *.tfstate
 *.tfstate.*
+
+# Local tfvars terraform.tfvars
+**/terraform.tfvars
 
 # Crash log files
 crash.log
@@ -54,6 +54,8 @@ override.tf.json
 **/.kitchen
 **/.kitchen.local.yml
 **/Gemfile.lock
+# Plan files
+**/tmp_plan
 
 test/fixtures/shared/terraform.tfvars
 

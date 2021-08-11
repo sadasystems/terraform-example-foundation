@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -91,6 +91,18 @@ module "org_shared_vpc_lien_removal" {
   constraint      = "constraints/compute.restrictXpnProjectLienRemoval"
 }
 
+module "org_shared_require_os_login" {
+  source          = "terraform-google-modules/org-policy/google"
+  count           = var.enable_os_login_policy ? 1 : 0
+  version         = "~> 3.0"
+  organization_id = local.organization_id
+  folder_id       = local.folder_id
+  policy_for      = local.policy_for
+  policy_type     = "boolean"
+  enforce         = "true"
+  constraint      = "constraints/compute.requireOsLogin"
+}
+
 /******************************************
   Cloud SQL
 *******************************************/
@@ -128,6 +140,17 @@ module "org_disable_sa_key_creation" {
   policy_type     = "boolean"
   enforce         = "true"
   constraint      = "constraints/iam.disableServiceAccountKeyCreation"
+}
+
+module "org_disable_automatic_iam_grants_on_default_service_accounts" {
+  source          = "terraform-google-modules/org-policy/google"
+  version         = "~> 3.0"
+  organization_id = local.organization_id
+  folder_id       = local.folder_id
+  policy_for      = local.policy_for
+  policy_type     = "boolean"
+  enforce         = "true"
+  constraint      = "constraints/iam.automaticIamGrantsForDefaultServiceAccounts"
 }
 
 /******************************************

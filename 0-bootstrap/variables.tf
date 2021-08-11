@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ variable "default_region" {
 }
 
 variable "parent_folder" {
-  description = "Optional - if using a folder for testing."
+  description = "Optional - for an organization with existing projects or for development/validation. It will place all the example foundation resources under the provided folder instead of the root organization. The value is the numeric folder ID. The folder must already exist."
   type        = string
   default     = ""
 }
@@ -58,10 +58,28 @@ variable "org_policy_admin_role" {
   default     = false
 }
 
-variable "skip_gcloud_download" {
-  description = "Whether to skip downloading gcloud (assumes gcloud is already available outside the module)"
-  type        = bool
-  default     = true
+variable "project_prefix" {
+  description = "Name prefix to use for projects created. Should be the same in all steps. Max size is 3 characters."
+  type        = string
+  default     = "prj"
+}
+
+variable "folder_prefix" {
+  description = "Name prefix to use for folders created. Should be the same in all steps."
+  type        = string
+  default     = "fldr"
+}
+
+variable "bucket_prefix" {
+  description = "Name prefix to use for state bucket created."
+  type        = string
+  default     = "bkt"
+}
+
+variable "cloud_source_repos" {
+  description = "List of Cloud Source Repositories created during bootstrap project build stage for use with Cloud Build."
+  type        = list(string)
+  default     = ["gcp-org", "gcp-environments", "gcp-networks", "gcp-projects"]
 }
 
 /* ----------------------------------------
@@ -111,7 +129,7 @@ variable "skip_gcloud_download" {
 # }
 
 # variable "on_prem_vpn_public_ip_address2" {
-#   description = "The secondpublic IP Address of the Jenkins Master."
+#   description = "The second public IP Address of the Jenkins Master."
 #   type        = string
 # }
 

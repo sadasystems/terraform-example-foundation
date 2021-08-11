@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,13 @@ group_org_admins = "gcp-organization-admins@example.com"
 
 group_billing_admins = "gcp-billing-admins@example.com"
 
-default_region = "australia-southeast1"
+default_region = "us-central1"
 
-//Optional - for development.  Will place all resources under a specific folder instead of org root
+// Optional - for an organization with existing projects or for development/validation.
+// Uncomment this variable to place all the example foundation resources under
+// the provided folder instead of the root organization.
+// The variable value is the numeric folder ID
+// The folder must already exist.
 //parent_folder = "01234567890"
 
 /* ----------------------------------------

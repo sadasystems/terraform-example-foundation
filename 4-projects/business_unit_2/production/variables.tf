@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,15 +29,9 @@ variable "billing_account" {
   type        = string
 }
 
-variable "skip_gcloud_download" {
-  description = "Whether to skip downloading gcloud (assumes gcloud is already available outside the module)"
-  type        = bool
-  default     = true
-}
-
 variable "access_context_manager_policy_id" {
   type        = string
-  description = "The ID of the access context manager policy the perimeter lies in. Can be obtained by running `gcloud access-context-manager policies list --organization YOUR-ORGANIZATION_ID --format=\"value(name)\"`."
+  description = "The ID of the access context manager policy the perimeter lies in. Can be obtained by running `gcloud access-context-manager policies list --organization YOUR_ORGANIZATION_ID --format=\"value(name)\"`."
 }
 
 variable "parent_folder" {
@@ -91,4 +85,69 @@ variable "budget_amount" {
   description = "The amount to use as the budget"
   type        = number
   default     = 1000
+}
+
+variable "project_prefix" {
+  description = "Name prefix to use for projects created."
+  type        = string
+  default     = "prj"
+}
+
+variable "folder_prefix" {
+  description = "Name prefix to use for folders created."
+  type        = string
+  default     = "fldr"
+}
+
+variable "enable_hub_and_spoke" {
+  description = "Enable Hub-and-Spoke architecture."
+  type        = bool
+  default     = false
+}
+
+variable "app_infra_pipeline_cloudbuild_sa" {
+  description = "Cloud Build SA used for deploying infrastructure"
+  type        = string
+}
+
+variable "secrets_prj_suffix" {
+  description = "Name suffix to use for secrets project created."
+  type        = string
+  default     = "env-secrets"
+}
+
+variable "location_kms" {
+  description = "Case-Sensitive Location for KMS Keyring (Should be same region as the GCS Bucket)"
+  type        = string
+  default     = "us"
+}
+
+variable "location_gcs" {
+  description = "Case-Sensitive Location for GCS Bucket (Should be same region as the KMS Keyring)"
+  type        = string
+  default     = "US"
+}
+
+variable "keyring_name" {
+  description = "Name to be used for KMS Keyring"
+  type        = string
+  default     = "sample-keyring"
+}
+
+variable "key_name" {
+  description = "Name to be used for KMS Key"
+  type        = string
+  default     = "crypto-key-example"
+}
+
+variable "key_rotation_period" {
+  description = "Rotation period in seconds to be used for KMS Key"
+  type        = string
+  default     = "7776000s"
+}
+
+variable "gcs_bucket_prefix" {
+  description = "Name prefix to be used for GCS Bucket"
+  type        = string
+  default     = "cmek-encrypted-bucket"
 }

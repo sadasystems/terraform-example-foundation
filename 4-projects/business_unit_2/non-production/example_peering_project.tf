@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,16 @@
  * limitations under the License.
  */
 
+locals {
+  shared_vpc_mode = var.enable_hub_and_spoke ? "-spoke" : ""
+}
+
 data "google_projects" "projects" {
   filter = "parent.id:${split("/", data.google_active_folder.env.name)[1]} labels.application_name=base-shared-vpc-host labels.environment=non-production lifecycleState=ACTIVE"
 }
 
 data "google_compute_network" "shared_vpc" {
-  name    = "vpc-n-shared-base"
+  name    = "vpc-n-shared-base${local.shared_vpc_mode}"
   project = data.google_projects.projects.projects[0].project_id
 }
 
@@ -41,11 +45,11 @@ module "peering_project" {
   org_id                      = var.org_id
   billing_account             = var.billing_account
   folder_id                   = data.google_active_folder.env.name
-  skip_gcloud_download        = var.skip_gcloud_download
   environment                 = "non-production"
+  project_prefix              = var.project_prefix
 
   # Metadata
-  project_prefix    = "sample-peering"
+  project_suffix    = "sample-peering"
   application_name  = "bu2-sample-peering"
   billing_code      = "1234"
   primary_contact   = "example@example.com"
@@ -55,7 +59,7 @@ module "peering_project" {
 
 module "peering_network" {
   source                                 = "terraform-google-modules/network/google"
-  version                                = "~> 2.0"
+  version                                = "~> 3.0"
   project_id                             = module.peering_project.project_id
   network_name                           = "vpc-n-peering-base"
   shared_vpc_host                        = "false"
@@ -64,12 +68,11 @@ module "peering_network" {
 }
 
 module "peering" {
-  source        = "terraform-google-modules/network/google//modules/network-peering"
-  version       = "~> 2.0"
-  prefix        = "bu2-n"
-  local_network = module.peering_network.network_self_link
-  peer_network  = data.google_compute_network.shared_vpc.self_link
-
+  source            = "terraform-google-modules/network/google//modules/network-peering"
+  version           = "~> 3.0"
+  prefix            = "bu2-n"
+  local_network     = module.peering_network.network_self_link
+  peer_network      = data.google_compute_network.shared_vpc.self_link
   module_depends_on = var.peering_module_depends_on
 }
 

@@ -1,11 +1,21 @@
 terraform {
-  version = "0.12.29"
+  version = "0.13.7"
 }
 
 providers {
-  google = ["~> 3.30"]
-  google-beta = ["~> 3.30"]
-  external = ["~> 1.0"]
-  null = ["~> 2.0"]
-  random = ["~> 2.0"]
+  google = {
+    version = ["~> 3.50"]
+  }
+  google-beta = {
+    version = ["~> 3.50"]
+  }
+  external = {
+    version = ["~> 1.0"]
+  }
+  null = {
+    version = ["~> 2.1"]
+  }
+  random = {
+    version = ["~> 2.3"]
+  }
 }

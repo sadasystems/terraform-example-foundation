@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,11 +39,9 @@ data "google_service_account_access_token" "default" {
  *****************************************/
 provider "google" {
   access_token = data.google_service_account_access_token.default.access_token
-  version      = "~> 3.30"
 }
 
 provider "google-beta" {
   access_token = data.google_service_account_access_token.default.access_token
-  version      = "~> 3.30"
 }
 

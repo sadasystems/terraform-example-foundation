@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ org_id = "000000000000"
 
 terraform_service_account = "org-terraform@example-project-2334.iam.gserviceaccount.com"
 
-access_context_manager_policy_id = "000000000000"
-
-//Optional - for development.  Will place all resources under a specific folder instead of org root
+// Optional - for an organization with existing projects or for development/validation.
+// Must be the same value used in previous steps.
 //parent_folder = "01234567890"

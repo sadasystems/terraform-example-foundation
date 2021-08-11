@@ -1,4 +1,4 @@
-# Copyright 2020 Google LLC
+# Copyright 2021 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+enable_hub_and_spoke = attribute('enable_hub_and_spoke')
 
 dev_bu1_project_base = attribute('dev_bu1_project_base')
 dev_bu1_project_floating = attribute('dev_bu1_project_floating')
@@ -59,6 +61,33 @@ prod_bu2_restricted_vpc_service_control_perimeter_name = attribute('prod_bu2_res
 
 access_context_manager_policy_id = attribute('access_context_manager_policy_id')
 
+shared_vpc_mode = enable_hub_and_spoke ? "-spoke" : ""
+
+dev_bu1_project_base_sa = attribute('dev_bu1_project_base_sa')
+dev_bu2_project_base_sa = attribute('dev_bu2_project_base_sa')
+nonprod_bu1_project_base_sa = attribute('nonprod_bu1_project_base_sa')
+nonprod_bu2_project_base_sa = attribute('nonprod_bu2_project_base_sa')
+prod_bu1_project_base_sa = attribute('prod_bu1_project_base_sa')
+prod_bu2_project_base_sa = attribute('prod_bu2_project_base_sa')
+
+shared_bu1_cb_sa = attribute('shared_bu1_cb_sa')
+shared_bu1_artifact_buckets = attribute('shared_bu1_artifact_buckets')
+shared_bu1_state_buckets = attribute('shared_bu1_state_buckets')
+shared_bu1_plan_triggers = attribute('shared_bu1_plan_triggers')
+shared_bu1_apply_triggers = attribute('shared_bu1_apply_triggers')
+shared_bu2_cb_sa = attribute('shared_bu2_cb_sa')
+shared_bu2_artifact_buckets = attribute('shared_bu2_artifact_buckets')
+shared_bu2_state_buckets = attribute('shared_bu2_state_buckets')
+shared_bu2_plan_triggers = attribute('shared_bu2_plan_triggers')
+shared_bu2_apply_triggers = attribute('shared_bu2_apply_triggers')
+
+shared_bu1_default_region = attribute('shared_bu1_default_region')
+shared_bu1_tf_runner_artifact_repo = attribute('shared_bu1_tf_runner_artifact_repo')
+shared_bu1_build_project = attribute('shared_bu1_build_project')
+shared_bu2_default_region = attribute('shared_bu2_default_region')
+shared_bu2_tf_runner_artifact_repo = attribute('shared_bu2_tf_runner_artifact_repo')
+shared_bu2_build_project = attribute('shared_bu2_build_project')
+
 environment_codes = %w[d n p]
 
 environment_name = {
@@ -78,6 +107,16 @@ base_projects_id = {
   'd' => { 'bu1' => dev_bu1_project_base, 'bu2' => dev_bu2_project_base },
   'n' => { 'bu1' => nonprod_bu1_project_base, 'bu2' => nonprod_bu2_project_base },
   'p' => { 'bu1' => prod_bu1_project_base, 'bu2' => prod_bu2_project_base }
+}
+
+base_project_sa = {
+  'd' => { 'bu1' => dev_bu1_project_base_sa, 'bu2' => dev_bu2_project_base_sa },
+  'n' => { 'bu1' => nonprod_bu1_project_base_sa, 'bu2' => nonprod_bu2_project_base_sa },
+  'p' => { 'bu1' => prod_bu1_project_base_sa, 'bu2' => prod_bu2_project_base_sa }
+}
+
+cloudbuild_sa = {
+  'bu1' => shared_bu1_cb_sa, 'bu2' => shared_bu2_cb_sa
 }
 
 restricted_projects_id = {
@@ -110,6 +149,19 @@ peering_networks = {
   'p' => { 'bu1' => prod_bu1_network_peering, 'bu2' => prod_bu2_network_peering }
 }
 
+artifact_register = {
+  'bu1' => {
+    'default_region' => shared_bu1_default_region,
+    'tf_runner_artifact_repo' => shared_bu1_tf_runner_artifact_repo,
+    'project_id' => shared_bu1_build_project
+  },
+  'bu2' => {
+    'default_region' => shared_bu2_default_region,
+    'tf_runner_artifact_repo' => shared_bu2_tf_runner_artifact_repo,
+    'project_id' => shared_bu2_build_project
+  },
+}
+
 control 'gcloud-projects' do
   title 'gcloud step 4-projects tests'
   environment_codes.each do |environment_code|
@@ -140,6 +192,56 @@ control 'gcloud-projects' do
         end
       end
 
+      describe command("gcloud iam service-accounts get-iam-policy #{base_project_sa[environment_code][business_unit]} --format=json") do
+        its(:exit_status) { should eq 0 }
+        its(:stderr) { should eq '' }
+
+        let(:data) do
+          if subject.exit_status.zero?
+            JSON.parse(subject.stdout)
+          else
+            {}
+          end
+        end
+
+        describe "#{base_project_sa[environment_code][business_unit]} IAM Policy" do
+          it 'should exist' do
+            expect(data).to_not be_empty
+          end
+          it "#{cloudbuild_sa[business_unit]} Cloud Build SA should have the right role for impersonation on #{base_project_sa[environment_code][business_unit]} SA" do
+            expect(data['bindings'][0]['members']).to include(
+              "serviceAccount:#{cloudbuild_sa[business_unit]}"
+            )
+            expect(data['bindings'][0]['role']).to eq "roles/iam.serviceAccountTokenCreator"
+          end
+        end
+      end
+
+      describe command("gcloud projects get-iam-policy #{base_projects_id[environment_code][business_unit]} --format=json") do
+        its(:exit_status) { should eq 0 }
+        its(:stderr) { should eq '' }
+
+        let(:data) do
+          if subject.exit_status.zero?
+            JSON.parse(subject.stdout)
+          else
+            {}
+          end
+        end
+
+        describe "#{base_projects_id[environment_code][business_unit]} IAM Policy" do
+          it 'should exist' do
+            expect(data).to_not be_empty
+          end
+          it "#{base_project_sa[environment_code][business_unit]} Base project SA should have the Editor role on #{base_projects_id[environment_code][business_unit]}" do
+            expect(data['bindings'][1]['members']).to include(
+              "serviceAccount:#{base_project_sa[environment_code][business_unit]}"
+            )
+            expect(data['bindings'][1]['role']).to eq "roles/editor"
+          end
+        end
+      end
+
       describe command("gcloud compute shared-vpc get-host-project #{restricted_projects_id[environment_code][business_unit]} --format=json") do
         its(:exit_status) { should eq 0 }
         its(:stderr) { should eq '' }
@@ -165,8 +267,8 @@ control 'gcloud-projects' do
             expect JSON.parse(command("gcloud projects describe #{data['name']} --format=json").stdout)['labels']['environment'].should eq environment_name[environment_code]
           end
 
-          it "is attached to the VPC with name equals to vpc-#{environment_code}-shared-restricted" do
-            expect JSON.parse(command("gcloud compute networks list --project #{data['name']} --format=json").stdout)[0]['name'].should eq "vpc-#{environment_code}-shared-restricted"
+          it "is attached to the VPC with name equals to vpc-#{environment_code}-shared-restricted#{shared_vpc_mode}" do
+            expect JSON.parse(command("gcloud compute networks list --project #{data['name']} --format=json").stdout)[0]['name'].should eq "vpc-#{environment_code}-shared-restricted#{shared_vpc_mode}"
           end
         end
       end
@@ -196,8 +298,8 @@ control 'gcloud-projects' do
             expect JSON.parse(command("gcloud projects describe #{data['name']} --format=json").stdout)['labels']['environment'].should eq environment_name[environment_code]
           end
 
-          it "is attached to the VPC with name equals to vpc-#{environment_code}-shared-base" do
-            expect JSON.parse(command("gcloud compute networks list --project #{data['name']} --format=json").stdout)[0]['name'].should eq "vpc-#{environment_code}-shared-base"
+          it "is attached to the VPC with name equals to vpc-#{environment_code}-shared-base#{shared_vpc_mode}" do
+            expect JSON.parse(command("gcloud compute networks list --project #{data['name']} --format=json").stdout)[0]['name'].should eq "vpc-#{environment_code}-shared-base#{shared_vpc_mode}"
           end
         end
       end
@@ -238,8 +340,31 @@ control 'gcloud-projects' do
           end
 
           it "has a peering with #{peering_networks[environment_code][business_unit]['network']}" do
-            expect(data[0]['peerings'][0]['network'].should eq peering_networks[environment_code][business_unit]['network'])
+            expect(data[0]['peerings'][0]['network'].should eq peering_networks[environment_code][business_unit][:network])
           end
+        end
+      end
+    end
+  end
+  business_units.each do |business_unit|
+    describe command("gcloud artifacts repositories describe #{artifact_register[business_unit]['tf_runner_artifact_repo']} --project=#{artifact_register[business_unit]['project_id']} --location=#{artifact_register[business_unit]['default_region']} --format=json") do
+      its(:exit_status) { should eq 0 }
+
+      let(:data) do
+        if subject.exit_status.zero?
+          JSON.parse(subject.stdout)
+        else
+          {}
+        end
+      end
+
+      describe "Artifact Repository #{artifact_register[business_unit]['tf_runner_artifact_repo']} in #{artifact_register[business_unit]['project_id']}" do
+        it 'should exist' do
+          expect(data).to_not be_empty
+        end
+
+        it "Artifact repo name should be projects/#{artifact_register[business_unit]['project_id']}/locations/#{artifact_register[business_unit]['default_region']}/repositories/#{artifact_register[business_unit]['tf_runner_artifact_repo']}" do
+          expect(data['name']).to eq "projects/#{artifact_register[business_unit]['project_id']}/locations/#{artifact_register[business_unit]['default_region']}/repositories/#{artifact_register[business_unit]['tf_runner_artifact_repo']}"
         end
       end
     end

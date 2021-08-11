@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ locals {
 }
 
 data "google_active_folder" "common" {
-  display_name = "fldr-common"
+  display_name = "${var.folder_prefix}-common"
   parent       = local.parent_id
 }
 
@@ -56,7 +56,7 @@ resource "google_dns_policy" "default_policy" {
 
 module "private_googleapis" {
   source      = "terraform-google-modules/cloud-dns/google"
-  version     = "~> 3.0"
+  version     = "~> 3.1"
   project_id  = var.project_id
   type        = "private"
   name        = "dz-${var.environment_code}-shared-base-apis"
@@ -89,7 +89,7 @@ module "private_googleapis" {
 
 module "base_gcr" {
   source      = "terraform-google-modules/cloud-dns/google"
-  version     = "~> 3.0"
+  version     = "~> 3.1"
   project_id  = var.project_id
   type        = "private"
   name        = "dz-${var.environment_code}-shared-base-gcr"
@@ -116,12 +116,45 @@ module "base_gcr" {
   ]
 }
 
+/***********************************************
+  Private Artifact Registry DNS Zone & records.
+ ***********************************************/
+
+module "base_pkg_dev" {
+  source      = "terraform-google-modules/cloud-dns/google"
+  version     = "~> 3.1"
+  project_id  = var.project_id
+  type        = "private"
+  name        = "dz-${var.environment_code}-shared-base-pkg-dev"
+  domain      = "pkg.dev."
+  description = "Private DNS zone to configure pkg.dev"
+
+  private_visibility_config_networks = [
+    module.main.network_self_link
+  ]
+
+  recordsets = [
+    {
+      name    = "*"
+      type    = "CNAME"
+      ttl     = 300
+      records = ["pkg.dev."]
+    },
+    {
+      name    = ""
+      type    = "A"
+      ttl     = 300
+      records = ["199.36.153.8", "199.36.153.9", "199.36.153.10", "199.36.153.11"]
+    },
+  ]
+}
+
 /******************************************
  Creates DNS Peering to DNS HUB
 *****************************************/
 module "peering_zone" {
   source      = "terraform-google-modules/cloud-dns/google"
-  version     = "~> 3.0"
+  version     = "~> 3.1"
   project_id  = var.project_id
   type        = "peering"
   name        = "dz-${var.environment_code}-shared-base-to-dns-hub"

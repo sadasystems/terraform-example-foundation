@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,6 @@
  * limitations under the License.
  */
 
-provider "google" {
-  version = "~> 3.38"
-}
-
-provider "google-beta" {
-  version = "~> 3.30"
-}
-
-provider "null" {
-  version = "~> 2.1"
-}
-
-provider "random" {
-  version = "~> 2.2"
-}
-
 /*************************************************
   Bootstrap GCP Organization.
 *************************************************/
@@ -41,15 +25,17 @@ locals {
 }
 
 resource "google_folder" "bootstrap" {
-  display_name = "fldr-bootstrap"
+  display_name = "${var.folder_prefix}-bootstrap"
   parent       = local.parent
 }
 
 module "seed_bootstrap" {
   source                         = "terraform-google-modules/bootstrap/google"
-  version                        = "~> 1.3"
+  version                        = "~> 3.0"
   org_id                         = var.org_id
   folder_id                      = google_folder.bootstrap.id
+  project_id                     = "${var.project_prefix}-b-seed"
+  state_bucket_name              = "${var.bucket_prefix}-b-tfstate"
   billing_account                = var.billing_account
   group_org_admins               = var.group_org_admins
   group_billing_admins           = var.group_billing_admins
@@ -57,8 +43,8 @@ module "seed_bootstrap" {
   org_project_creators           = var.org_project_creators
   sa_enable_impersonation        = true
   parent_folder                  = var.parent_folder == "" ? "" : local.parent
-  skip_gcloud_download           = var.skip_gcloud_download
   org_admins_org_iam_permissions = local.org_admins_org_iam_permissions
+  project_prefix                 = var.project_prefix
 
   project_labels = {
     environment       = "bootstrap"
@@ -73,11 +59,13 @@ module "seed_bootstrap" {
   activate_apis = [
     "serviceusage.googleapis.com",
     "servicenetworking.googleapis.com",
+    "cloudkms.googleapis.com",
     "compute.googleapis.com",
     "logging.googleapis.com",
     "bigquery.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "cloudbilling.googleapis.com",
+    "cloudbuild.googleapis.com",
     "iam.googleapis.com",
     "admin.googleapis.com",
     "appengine.googleapis.com",
@@ -113,20 +101,25 @@ resource "google_billing_account_iam_member" "tf_billing_admin" {
 
 // Comment-out the cloudbuild_bootstrap module and its outputs if you want to use Jenkins instead of Cloud Build
 module "cloudbuild_bootstrap" {
-  source                    = "terraform-google-modules/bootstrap/google//modules/cloudbuild"
-  version                   = "~> 1.3"
-  org_id                    = var.org_id
-  folder_id                 = google_folder.bootstrap.id
-  billing_account           = var.billing_account
-  group_org_admins          = var.group_org_admins
-  default_region            = var.default_region
-  terraform_sa_email        = module.seed_bootstrap.terraform_sa_email
-  terraform_sa_name         = module.seed_bootstrap.terraform_sa_name
-  terraform_state_bucket    = module.seed_bootstrap.gcs_bucket_tfstate
-  sa_enable_impersonation   = true
-  skip_gcloud_download      = var.skip_gcloud_download
-  cloudbuild_plan_filename  = "cloudbuild-tf-plan.yaml"
-  cloudbuild_apply_filename = "cloudbuild-tf-apply.yaml"
+  source                      = "terraform-google-modules/bootstrap/google//modules/cloudbuild"
+  version                     = "~> 3.0"
+  org_id                      = var.org_id
+  folder_id                   = google_folder.bootstrap.id
+  project_id                  = "${var.project_prefix}-b-cicd"
+  billing_account             = var.billing_account
+  group_org_admins            = var.group_org_admins
+  default_region              = var.default_region
+  terraform_sa_email          = module.seed_bootstrap.terraform_sa_email
+  terraform_sa_name           = module.seed_bootstrap.terraform_sa_name
+  terraform_state_bucket      = module.seed_bootstrap.gcs_bucket_tfstate
+  sa_enable_impersonation     = true
+  cloudbuild_plan_filename    = "cloudbuild-tf-plan.yaml"
+  cloudbuild_apply_filename   = "cloudbuild-tf-apply.yaml"
+  project_prefix              = var.project_prefix
+  cloud_source_repos          = var.cloud_source_repos
+  terraform_validator_release = "v0.4.0"
+  terraform_version           = "0.13.7"
+  terraform_version_sha256sum = "4a52886e019b4fdad2439da5ff43388bbcc6cce9784fde32c53dcd0e28ca9957"
 
   activate_apis = [
     "serviceusage.googleapis.com",
@@ -153,18 +146,76 @@ module "cloudbuild_bootstrap" {
     env_code          = "b"
   }
 
-  cloud_source_repos = [
-    "gcp-org",
-    "gcp-environments",
-    "gcp-networks",
-    "gcp-projects"
-  ]
-
   terraform_apply_branches = [
     "development",
     "non\\-production", //non-production needs a \ to ensure regex matches correct branches.
     "production"
   ]
+}
+
+// Standalone repo for Terraform-validator policies.
+// This repo does not need to trigger builds in Cloud Build.
+resource "google_sourcerepo_repository" "gcp_policies" {
+  project = module.cloudbuild_bootstrap.cloudbuild_project_id
+  name    = "gcp-policies"
+
+  depends_on = [module.cloudbuild_bootstrap.csr_repos]
+}
+
+resource "google_project_iam_member" "project_source_reader" {
+  project = module.cloudbuild_bootstrap.cloudbuild_project_id
+  role    = "roles/source.reader"
+  member  = "serviceAccount:${module.seed_bootstrap.terraform_sa_email}"
+
+  depends_on = [module.cloudbuild_bootstrap.csr_repos]
+}
+
+data "google_project" "cloudbuild" {
+  project_id = module.cloudbuild_bootstrap.cloudbuild_project_id
+
+  depends_on = [module.cloudbuild_bootstrap.csr_repos]
+}
+
+resource "google_organization_iam_member" "org_cb_sa_browser" {
+  count  = var.parent_folder == "" ? 1 : 0
+  org_id = var.org_id
+  role   = "roles/browser"
+  member = "serviceAccount:${data.google_project.cloudbuild.number}@cloudbuild.gserviceaccount.com"
+}
+
+resource "google_folder_iam_member" "folder_cb_sa_browser" {
+  count  = var.parent_folder != "" ? 1 : 0
+  folder = var.parent_folder
+  role   = "roles/browser"
+  member = "serviceAccount:${data.google_project.cloudbuild.number}@cloudbuild.gserviceaccount.com"
+}
+
+resource "google_organization_iam_member" "org_tf_compute_security_policy_admin" {
+  count  = var.parent_folder == "" ? 1 : 0
+  org_id = var.org_id
+  role   = "roles/compute.orgSecurityPolicyAdmin"
+  member = "serviceAccount:${module.seed_bootstrap.terraform_sa_email}"
+}
+
+resource "google_folder_iam_member" "folder_tf_compute_security_policy_admin" {
+  count  = var.parent_folder != "" ? 1 : 0
+  folder = var.parent_folder
+  role   = "roles/compute.orgSecurityPolicyAdmin"
+  member = "serviceAccount:${module.seed_bootstrap.terraform_sa_email}"
+}
+
+resource "google_organization_iam_member" "org_tf_compute_security_resource_admin" {
+  count  = var.parent_folder == "" ? 1 : 0
+  org_id = var.org_id
+  role   = "roles/compute.orgSecurityResourceAdmin"
+  member = "serviceAccount:${module.seed_bootstrap.terraform_sa_email}"
+}
+
+resource "google_folder_iam_member" "folder_tf_compute_security_resource_admin" {
+  count  = var.parent_folder != "" ? 1 : 0
+  folder = var.parent_folder
+  role   = "roles/compute.orgSecurityResourceAdmin"
+  member = "serviceAccount:${module.seed_bootstrap.terraform_sa_email}"
 }
 
 ## Un-comment the jenkins_bootstrap module and its outputs if you want to use Jenkins instead of Cloud Build
@@ -175,7 +226,7 @@ module "cloudbuild_bootstrap" {
 #  billing_account                         = var.billing_account
 #  group_org_admins                        = var.group_org_admins
 #  default_region                          = var.default_region
-#  terraform_sa_email                      = module.seed_bootstrap.terraform_sa_email
+#  terraform_service_account               = module.seed_bootstrap.terraform_sa_email
 #  terraform_sa_name                       = module.seed_bootstrap.terraform_sa_name
 #  terraform_state_bucket                  = module.seed_bootstrap.gcs_bucket_tfstate
 #  sa_enable_impersonation                 = true
@@ -194,4 +245,18 @@ module "cloudbuild_bootstrap" {
 #  tunnel0_bgp_session_range               = var.tunnel0_bgp_session_range
 #  tunnel1_bgp_peer_address                = var.tunnel1_bgp_peer_address
 #  tunnel1_bgp_session_range               = var.tunnel1_bgp_session_range
+# }
+
+# resource "google_organization_iam_member" "org_jenkins_sa_browser" {
+#   count  = var.parent_folder == "" ? 1 : 0
+#   org_id = var.org_id
+#   role   = "roles/browser"
+#   member = "serviceAccount:${module.jenkins_bootstrap.jenkins_agent_sa_email}"
+# }
+
+# resource "google_folder_iam_member" "folder_jenkins_sa_browser" {
+#   count  = var.parent_folder != "" ? 1 : 0
+#   folder = var.parent_folder
+#   role   = "roles/browser"
+#   member = "serviceAccount:${module.jenkins_bootstrap.jenkins_agent_sa_email}"
 # }

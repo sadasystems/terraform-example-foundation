@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ locals {
 }
 
 data "google_active_folder" "common" {
-  display_name = "fldr-common"
+  display_name = "${var.folder_prefix}-common"
   parent       = local.parent_id
 }
 
@@ -107,6 +107,39 @@ module "restricted_gcr" {
       type    = "CNAME"
       ttl     = 300
       records = ["gcr.io."]
+    },
+    {
+      name    = ""
+      type    = "A"
+      ttl     = 300
+      records = ["199.36.153.4", "199.36.153.5", "199.36.153.6", "199.36.153.7"]
+    },
+  ]
+}
+
+/**************************************************
+  Restricted Artifact Registry DNS Zone & records.
+ **************************************************/
+
+module "restricted_pkg_dev" {
+  source      = "terraform-google-modules/cloud-dns/google"
+  version     = "~> 3.0"
+  project_id  = var.project_id
+  type        = "private"
+  name        = "dz-${var.environment_code}-shared-restricted-pkg-dev"
+  domain      = "pkg.dev."
+  description = "Private DNS zone to configure pkg.dev"
+
+  private_visibility_config_networks = [
+    module.main.network_self_link
+  ]
+
+  recordsets = [
+    {
+      name    = "*"
+      type    = "CNAME"
+      ttl     = 300
+      records = ["pkg.dev."]
     },
     {
       name    = ""

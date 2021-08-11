@@ -1,12 +1,12 @@
 ## Overview
 
-The objective of this module is to deploy a Google Cloud Platform project `prj-cicd` to host a Jenkins Agent that can connect with your current Jenkins Master on-prem. This module is a replica of the [cloudbuild module](https://github.com/terraform-google-modules/terraform-google-bootstrap/tree/master/modules/cloudbuild), but re-purposed to use Jenkins instead. This module creates:
-- The `prj-cicd` project, which includes:
+The objective of this module is to deploy a Google Cloud Platform project `prj-b-cicd` to host a Jenkins Agent that can connect with your current Jenkins Master on-prem. This module is a replica of the [cloudbuild module](https://github.com/terraform-google-modules/terraform-google-bootstrap/tree/master/modules/cloudbuild), but re-purposed to use Jenkins instead. This module creates:
+- The `prj-b-cicd` project, which includes:
     - GCE Instance for the Jenkins Agent, which you will configure to connect to your current Jenkins Master using SSH.
     - VPC to connect the Jenkins GCE Instance to
     - FW rules to allow communication over port 22
     - VPN connection with on-prem (or where ever your Jenkins Master is located)
-    - Custom service account `sa-jenkins-agent-gce@prj-cicd-xxxx.iam.gserviceaccount.com` for the GCE instance. This service account is granted the access to generate tokens on the provided Terraform custom service account
+    - Custom service account `sa-jenkins-agent-gce@prj-b-cicd-xxxx.iam.gserviceaccount.com` for the GCE instance. This service account is granted the access to generate tokens on the provided Terraform custom service account
 Please note this module does not include an option to create a Jenkins Master. To deploy a Jenkins Master, you should follow one of the available user guides about [Jenkins in GCP](https://cloud.google.com/jenkins).
 
 **If you don't have a Jenkins implementation and don't want one**, then we recommend you to [use the Cloud Build module](../../README.md) instead.
@@ -23,7 +23,7 @@ module "jenkins_bootstrap" {
   billing_account                         = "<BILLING_ACCOUNT_ID>"
   group_org_admins                        = "gcp-organization-admins@example.com"
   default_region                          = "us-central1"
-  terraform_sa_email                      = "<SERVICE_ACCOUNT_EMAIL>" # normally module.seed_bootstrap.terraform_sa_email
+  terraform_service_account               = "<SERVICE_ACCOUNT_EMAIL>" # normally module.seed_bootstrap.terraform_sa_email
   terraform_sa_name                       = "<SERVICE_ACCOUNT_NAME>" # normally module.seed_bootstrap.terraform_sa_name
   terraform_state_bucket                  = "<GCS_STATE_BUCKET_NAME>" # normally module.seed_bootstrap.gcs_bucket_tfstate
   sa_enable_impersonation                 = true
@@ -74,14 +74,13 @@ module "jenkins_bootstrap" {
 | router\_asn | BGP ASN for cloud routes. | `number` | `"64515"` | no |
 | sa\_enable\_impersonation | Allow org\_admins group to impersonate service account & enable APIs required. | `bool` | `false` | no |
 | service\_account\_prefix | Name prefix to use for service accounts. | `string` | `"sa"` | no |
-| skip\_gcloud\_download | Whether to skip downloading gcloud (assumes gcloud is already available outside the module) | `bool` | `true` | no |
 | storage\_bucket\_labels | Labels to apply to the storage bucket. | `map(string)` | `{}` | no |
 | storage\_bucket\_prefix | Name prefix to use for storage buckets. | `string` | `"bkt"` | no |
-| terraform\_sa\_email | Email for terraform service account. It must be supplied by the seed project | `string` | n/a | yes |
 | terraform\_sa\_name | Fully-qualified name of the terraform service account. It must be supplied by the seed project | `string` | n/a | yes |
+| terraform\_service\_account | Email for terraform service account. It must be supplied by the seed project | `string` | n/a | yes |
 | terraform\_state\_bucket | Default state bucket, used in Cloud Build substitutions. It must be supplied by the seed project | `string` | n/a | yes |
-| terraform\_version | Default terraform version. | `string` | `"0.12.24"` | no |
-| terraform\_version\_sha256sum | sha256sum for default terraform version. | `string` | `"602d2529aafdaa0f605c06adb7c72cfb585d8aa19b3f4d8d189b42589e27bf11"` | no |
+| terraform\_version | Default terraform version. | `string` | `"0.13.7"` | no |
+| terraform\_version\_sha256sum | sha256sum for default terraform version. | `string` | `"4a52886e019b4fdad2439da5ff43388bbcc6cce9784fde32c53dcd0e28ca9957"` | no |
 | tunnel0\_bgp\_peer\_address | BGP peer address for tunnel 0 | `string` | n/a | yes |
 | tunnel0\_bgp\_session\_range | BGP session range for tunnel 0 | `string` | n/a | yes |
 | tunnel1\_bgp\_peer\_address | BGP peer address for tunnel 1 | `string` | n/a | yes |
@@ -106,8 +105,8 @@ module "jenkins_bootstrap" {
 ### Software
 
 - [gcloud sdk](https://cloud.google.com/sdk/install) >= 206.0.0
-- [Terraform](https://www.terraform.io/downloads.html) = 0.12.24
-    - The scripts in this codebase use Terraform v0.12.24. You should use the same version in the manual steps to avoid [Terraform State Snapshot Lock](https://github.com/hashicorp/terraform/issues/23290) errors caused by differences in terraform versions.
+- [Terraform](https://www.terraform.io/downloads.html) = 0.13.7
+    - The scripts in this codebase use Terraform v0.13.7. You should use the same version in the manual steps to avoid [Terraform State Snapshot Lock](https://github.com/hashicorp/terraform/issues/23290) errors caused by differences in terraform versions.
 
 ### Infrastructure
 
@@ -136,7 +135,7 @@ Error: google: could not find default credentials. See https://developers.google
 ```
 
 ```
-Error: Error setting billing account "aaaaaa-bbbbbb-cccccc" for project "projects/cft-jenkins-dc3a": googleapi: Error 400: Precondition check failed., failedPrecondition
+Error: Error setting billing account "aaaaaa-bbbbbb-cccccc" for project "projects/prj-jenkins-dc3a": googleapi: Error 400: Precondition check failed., failedPrecondition
       on .terraform/modules/jenkins/terraform-google-project-factory-7.1.0/modules/core_project_factory/main.tf line 96, in resource "google_project" "main":
       96: resource "google_project" "main" {
 ```

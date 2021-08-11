@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ output "seed_project_id" {
   value       = module.seed_bootstrap.seed_project_id
 }
 
-output "terraform_sa_email" {
+output "terraform_service_account" {
   description = "Email for privileged service account for Terraform."
   value       = module.seed_bootstrap.terraform_sa_email
 }
@@ -44,13 +44,18 @@ output "cloudbuild_project_id" {
 }
 
 output "gcs_bucket_cloudbuild_artifacts" {
-  description = "Bucket used to store Cloud/Build artefacts in CloudBuild project."
+  description = "Bucket used to store Cloud/Build artifacts in CloudBuild project."
   value       = module.cloudbuild_bootstrap.gcs_bucket_cloudbuild_artifacts
 }
 
 output "csr_repos" {
   description = "List of Cloud Source Repos created by the module, linked to Cloud Build triggers."
   value       = module.cloudbuild_bootstrap.csr_repos
+}
+
+output "terraform_validator_policies_repo" {
+  description = "Cloud Source Repository created for terraform-validator policies."
+  value       = google_sourcerepo_repository.gcp_policies
 }
 
 output "kms_keyring" {

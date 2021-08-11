@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +18,13 @@ variable "org_id" {
   description = "The numeric organization id"
 }
 
-variable "terraform_sa_email" {
+variable "terraform_service_account" {
   description = "The SA that will be used for creating projects."
 }
 
 variable "policy_id" {
   type        = number
-  description = "The id of the default Access Context Manager policy created in step `1-org`. Can be obtained by running `gcloud access-context-manager policies list --organization YOUR-ORGANIZATION_ID --format=\"value(name)\"`."
+  description = "The id of the default Access Context Manager policy created in step `1-org`. Can be obtained by running `gcloud access-context-manager policies list --organization YOUR_ORGANIZATION_ID --format=\"value(name)\"`."
 }
 
 variable "domain" {
@@ -36,4 +36,10 @@ variable "parent_folder" {
   description = "Folder for testing."
   type        = string
   default     = ""
+}
+
+variable "enable_hub_and_spoke" {
+  description = "Enable Hub-and-Spoke architecture."
+  type        = bool
+  default     = false
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,8 @@ module "development" {
   billing_account            = var.billing_account
   monitoring_workspace_users = var.group_email
   parent_folder              = var.parent_folder
-  terraform_service_account  = var.terraform_sa_email
+  terraform_service_account  = var.terraform_service_account
+  project_prefix             = var.project_prefix
 }
 
 module "non-production" {
@@ -29,7 +30,8 @@ module "non-production" {
   billing_account            = var.billing_account
   monitoring_workspace_users = var.group_email
   parent_folder              = var.parent_folder
-  terraform_service_account  = var.terraform_sa_email
+  terraform_service_account  = var.terraform_service_account
+  project_prefix             = var.project_prefix
 }
 
 module "production" {
@@ -38,5 +40,6 @@ module "production" {
   billing_account            = var.billing_account
   monitoring_workspace_users = var.group_email
   parent_folder              = var.parent_folder
-  terraform_service_account  = var.terraform_sa_email
+  terraform_service_account  = var.terraform_service_account
+  project_prefix             = var.project_prefix
 }
